@@ -68,7 +68,7 @@ def _build_tailor_prompt(profile: dict) -> str:
     education = profile.get("experience", {})
     education_level = education.get("education_level", "")
 
-    return f"""You are a senior technical recruiter rewriting a resume to get this person an interview.
+    return f"""You are a senior recruiter rewriting a resume to get this person an interview.
 
 Take the base resume and job description. Return a tailored resume as a JSON object.
 
@@ -81,26 +81,28 @@ Take the base resume and job description. Return a tailored resume as a JSON obj
 ## SKILLS BOUNDARY (real skills only):
 {skills_block}
 
-You MAY add 2-3 closely related tools (Kubernetes if Docker, Terraform if AWS, Redis if PostgreSQL). No unrelated languages/frameworks.
+You MAY add 1-2 closely related skills the candidate could realistically have given what's already on the resume (e.g. a tool from the same family, a related methodology). Do NOT add skills from a completely different domain.
 
 ## TAILORING RULES:
 
-TITLE: Match the target role. Keep seniority (Senior/Lead/Staff). Drop company suffixes and team names.
+TITLE: Match the target role. Keep seniority markers if real (Senior, Lead, Graduate). Drop company suffixes and team names.
 
-SUMMARY: Rewrite from scratch. Lead with the 1-2 skills that matter most for THIS role. Sound like someone who's done this job.
+SUMMARY: Rewrite from scratch. Lead with the 1-2 skills or experiences that matter most for THIS role. Sound like someone who's done this work.
 
-SKILLS: Reorder each category so the job's must-haves appear first.
+SKILLS: Reorder so the job's must-haves appear first. Keep the candidate's existing category structure where it exists.
 
 Reframe EVERY bullet for this role. Same real work, different angle. Every bullet must be reworded. Never copy verbatim.
 
-PROJECTS: Reorder by relevance. Drop irrelevant projects entirely.
+PROJECTS: Reorder by relevance. Drop irrelevant projects entirely. Omit this section if the resume doesn't have meaningful projects.
 
-BULLETS: Strong verb + what you built + quantified impact. Vary verbs (Built, Designed, Implemented, Reduced, Automated, Deployed, Operated, Optimized). Most relevant first. Max 4 per section.
+BULLETS: Strong action verb + what you did + outcome (with a number where one exists). Vary verbs appropriately for the role (e.g. for environmental: Conducted, Sampled, Analysed, Monitored, Reported, Coordinated, Investigated; for engineering: Built, Designed, Implemented, Deployed; for retail: Delivered, Managed, Trained, Resolved). Most relevant first. Max 4 per section.
 
 ## VOICE:
-- Write like a real engineer. Short, direct.
-- GOOD: "Automated financial reporting with Python + API integrations, cut processing time from 10 hours to 2"
-- BAD: "Leveraged cutting-edge AI technologies to drive transformative operational efficiencies"
+- Write like a real working professional. Short, direct.
+- GOOD example (env): "Conducted water quality sampling across 12 freshwater sites, recorded pH and dissolved oxygen using calibrated field instruments."
+- GOOD example (tech): "Automated financial reporting with Python + API integrations, cut processing time from 10 hours to 2."
+- BAD: "Leveraged cutting-edge methodologies to drive transformative operational efficiencies."
+- Use **Australian English** spelling throughout: organise, optimise, analyse, behaviour, colour, programme, specialise, recognise, licence (noun), centre, metres, kilometres.
 - BANNED WORDS (using ANY of these = validation failure — do not use them even once):
   {banned_str}
 - No em dashes. Use commas, periods, or hyphens.
@@ -114,7 +116,11 @@ BULLETS: Strong verb + what you built + quantified impact. Vary verbs (Built, De
 
 ## OUTPUT: Return ONLY valid JSON. No markdown fences. No commentary. No "here is" preamble.
 
-{{"title":"Role Title","summary":"2-3 tailored sentences.","skills":{{"Languages":"...","Frameworks":"...","DevOps & Infra":"...","Databases":"...","Tools":"..."}},"experience":[{{"header":"Title at Company","subtitle":"Tech | Dates","bullets":["bullet 1","bullet 2","bullet 3","bullet 4"]}}],"projects":[{{"header":"Project Name - Description","subtitle":"Tech | Dates","bullets":["bullet 1","bullet 2"]}}],"education":"{school} | {education_level}"}}"""
+`skills` is a dict mapping category name → comma-separated string. Use 2-4 categories that fit the role (examples: "Environmental & Technical", "Field & Laboratory", "Languages", "Frameworks", "Tools", "Professional"). Categories should match what the candidate actually has and what the job asks for. Do NOT invent categories.
+
+`projects` is optional — return an empty array `[]` if the resume has no relevant projects.
+
+{{"title":"Role Title","summary":"2-3 tailored sentences.","skills":{{"Category A":"item1, item2, item3","Category B":"item1, item2"}},"experience":[{{"header":"Title at Company","subtitle":"Context | Dates","bullets":["bullet 1","bullet 2","bullet 3","bullet 4"]}}],"projects":[],"education":"{school} | {education_level}"}}"""
 
 
 def _build_judge_prompt(profile: dict) -> str:
@@ -148,11 +154,11 @@ ISSUES: (list any problems, or "none")
 - Change tone and wording extensively
 
 ## WHAT IS FABRICATION (FAIL for these):
-1. Adding tools, languages, or frameworks to TECHNICAL SKILLS that aren't in the original. The allowed skills are ONLY: {skills_str}
+1. Adding skills, tools, languages, frameworks, methodologies, or certifications to the Skills section that aren't in the original. The allowed skills are ONLY: {skills_str}
 2. Inventing NEW metrics or numbers not in the original. The real metrics are: {metrics_str}
 3. Inventing work that has no basis in any original bullet (completely new achievements).
-4. Adding companies, roles, or degrees that don't exist.
-5. Changing real numbers (inflating 80% to 95%, 500 nodes to 1000 nodes).
+4. Adding companies, roles, degrees, or certifications that don't exist.
+5. Changing real numbers (inflating 80% to 95%, 500 customers to 1000 customers).
 
 ## WHAT IS NOT FABRICATION (do NOT fail for these):
 - Rewording any bullet, even heavily, as long as the underlying work is real

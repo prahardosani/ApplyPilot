@@ -30,10 +30,10 @@ SCORING CRITERIA:
 - 1-2: Poor match. Completely different field or experience level.
 
 IMPORTANT FACTORS:
-- Weight technical skills heavily (programming languages, frameworks, tools)
-- Consider transferable experience (automation, scripting, API work)
-- Factor in the candidate's project experience
-- Be realistic about experience level vs. job requirements (years of experience, seniority)
+- Weight the skills the job description itself emphasises (read the JD first; for an environmental role weight field, lab, analytical, regulatory skills; for an engineering role weight programming languages, frameworks, tools; for a retail role weight customer service, sales, compliance).
+- Consider transferable experience: relevant fieldwork, coursework, internships, or work in regulated/customer-facing environments all count when the JD asks for them.
+- Be realistic about experience level vs. job requirements (years of experience, seniority). A "graduate" or "entry-level" role should not be downgraded for a candidate with limited paid experience.
+- Do NOT penalise candidates for missing skills the JD doesn't actually require.
 
 RESPOND IN EXACTLY THIS FORMAT (no other text):
 SCORE: [1-10]

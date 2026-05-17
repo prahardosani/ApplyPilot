@@ -56,19 +56,18 @@ LLM_LEAK_PHRASES: list[str] = [
     "the following cover letter", "the letter below",
 ]
 
-# Known fabrication markers: completely unrelated tools/languages.
-# Reasonable stretches (K8s, Terraform, Redis, Kafka etc.) are ALLOWED.
+# Known fabrication markers: things the LLM might invent that the candidate
+# almost certainly doesn't have. Kept minimal because for non-tech roles the
+# risk shifts from "made-up programming language" to "made-up certification".
 FABRICATION_WATCHLIST: set[str] = {
-    # Languages with zero relation to the candidate's stack
-    "c#", "c++", "golang", "rust", "ruby",
-    "kotlin", "swift", "scala", "matlab",
-    # Frameworks for wrong languages
-    "spring", "django", "rails", "angular", "vue", "svelte",
-    # Hard lies: certifications can't be stretched
-    "certif", "certified", "pmp", "scrum master", "aws certified",
+    # Certifications can't be stretched — these are binary credentials.
+    "certified", "pmp", "scrum master", "aws certified",
+    "azure certified", "gcp certified", "cissp", "cpa qualified",
 }
 
-REQUIRED_SECTIONS: set[str] = {"SUMMARY", "TECHNICAL SKILLS", "EXPERIENCE", "PROJECTS", "EDUCATION"}
+# Sections every resume should have. Skills/Projects vary by domain so they
+# are NOT required — checked separately as warnings.
+REQUIRED_SECTIONS: set[str] = {"SUMMARY", "EXPERIENCE", "EDUCATION"}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
@@ -113,8 +112,10 @@ def validate_json_fields(data: dict, profile: dict, mode: str = "normal") -> dic
     errors: list[str] = []
     warnings: list[str] = []
 
-    # Required keys — always checked regardless of mode
-    for key in ("title", "summary", "skills", "experience", "projects", "education"):
+    # Required keys — always checked regardless of mode.
+    # `projects` and `skills` are optional: non-tech roles often have neither
+    # as standalone sections.
+    for key in ("title", "summary", "experience", "education"):
         if key not in data or not data[key]:
             errors.append(f"Missing required field: {key}")
     if errors:
@@ -202,12 +203,12 @@ def validate_tailored_resume(text: str, profile: dict, original_text: str = "") 
     personal = profile.get("personal", {})
     resume_facts = profile.get("resume_facts", {})
 
-    # 1. Check required sections exist (flexible matching)
+    # 1. Check required sections exist (flexible matching).
+    # SUMMARY / EXPERIENCE / EDUCATION are required for every resume.
+    # SKILLS / PROJECTS are domain-dependent and treated as optional.
     section_variants: dict[str, list[str]] = {
         "SUMMARY": ["summary", "professional summary", "profile"],
-        "TECHNICAL SKILLS": ["technical skills", "skills", "tech stack", "core skills", "technologies"],
-        "EXPERIENCE": ["experience", "work experience", "professional experience"],
-        "PROJECTS": ["projects", "personal projects", "key projects", "selected projects"],
+        "EXPERIENCE": ["experience", "work experience", "professional experience", "professional history", "relevant experience"],
         "EDUCATION": ["education", "academic background"],
     }
     for section, variants in section_variants.items():
@@ -242,8 +243,15 @@ def validate_tailored_resume(text: str, profile: dict, original_text: str = "") 
     if phone and phone not in text:
         warnings.append("Phone missing -- will be injected")
 
-    # 7. Scan TECHNICAL SKILLS section for fabricated tools
-    skills_start = text_lower.find("technical skills")
+    # 7. Scan the skills section (any variant) for fabricated tools/certs.
+    skills_headers = ("technical skills", "skills & capabilities", "skills and capabilities",
+                      "skills", "core skills", "tech stack", "capabilities")
+    skills_start = -1
+    for header in skills_headers:
+        idx = text_lower.find(header)
+        if idx != -1:
+            skills_start = idx
+            break
     skills_end = text_lower.find("experience", skills_start) if skills_start != -1 else -1
     if skills_start != -1 and skills_end != -1:
         skills_block = text_lower[skills_start:skills_end]
@@ -251,7 +259,7 @@ def validate_tailored_resume(text: str, profile: dict, original_text: str = "") 
             if len(fake) <= 2:
                 continue
             if fake in skills_block:
-                errors.append(f"FABRICATED SKILL in Technical Skills: '{fake}'")
+                errors.append(f"Fabricated credential in Skills section: '{fake}'")
 
     # 8. Scan full document for fabrication watchlist items not in original
     if original_text:

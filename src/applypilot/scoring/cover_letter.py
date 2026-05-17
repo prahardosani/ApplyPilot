@@ -1,6 +1,6 @@
 """Cover letter generation: LLM-powered, profile-driven, with validation.
 
-Generates concise, engineering-voice cover letters tailored to specific job
+Generates concise, professional cover letters tailored to specific job
 postings. All personal data (name, skills, achievements) comes from the user's
 profile at runtime. No hardcoded personal information.
 """
@@ -69,11 +69,11 @@ def _build_cover_letter_prompt(profile: dict) -> str:
 
 STRUCTURE: 3 short paragraphs. Under 250 words. Every sentence must earn its place.
 
-PARAGRAPH 1 (2-3 sentences): Open with a specific thing YOU built that solves THEIR problem. Not "I'm excited about this role." Not "This role aligns with my experience." Start with the work.
+PARAGRAPH 1 (2-3 sentences): Open with a specific thing the candidate has actually done that connects directly to what this role needs. Not "I'm excited about this role." Not "This role aligns with my experience." Start with the work or experience.
 
-PARAGRAPH 2 (3-4 sentences): Pick 2 achievements from the resume that are MOST relevant to THIS job. Use numbers. Frame as solving their problem, not listing your accomplishments.{projects_hint}{metrics_hint}
+PARAGRAPH 2 (3-4 sentences): Pick 2 things from the resume that are MOST relevant to THIS job. Use numbers when the resume has them. Frame as why this matches their needs, not as a list of accomplishments.{projects_hint}{metrics_hint}
 
-PARAGRAPH 3 (1-2 sentences): One specific thing about the company from the job description (a product, a technical challenge, a team structure). Then close. "Happy to walk through any of this in more detail." or "Let's discuss." Nothing else.
+PARAGRAPH 3 (1-2 sentences): One specific thing about the organisation from the job description (their work, a project they mention, a value or mission they emphasise, a programme or initiative). Then close. "Happy to walk through any of this in more detail." or "Let's discuss." Nothing else.
 
 BANNED WORDS AND PHRASES (automated validator rejects ANY of these — do not use even once):
 {all_banned}
@@ -84,15 +84,16 @@ ALSO BANNED (meta-commentary the validator catches):
 BANNED PUNCTUATION: No em dashes (—) or en dashes (–). Use commas or periods.
 
 VOICE:
-- Write like a real engineer emailing someone they respect. Not formal, not casual. Just direct.
+- Write like a real working professional emailing someone they respect. Not formal, not casual. Just direct.
+- Use **Australian English** spelling throughout: organise, optimise, analyse, behaviour, colour, programme, specialise, recognise, licence (noun), centre, metres, kilometres.
 - NEVER narrate or explain what you're doing. BAD: "This demonstrates my commitment to X." GOOD: Just state the fact and move on.
-- NEVER hedge. BAD: "might address some of your challenges." GOOD: "solves the same problem your team is facing."
-- Every sentence should contain either a number, a tool name, or a specific outcome. If it doesn't, cut it.
+- NEVER hedge. BAD: "might address some of your challenges." GOOD: "is directly relevant to what your team needs."
+- Prefer specific detail (a number, a place, a tool, an outcome) over generic claims. If the resume doesn't have numbers, use concrete nouns and places instead — never invent metrics.
 - Read it out loud. If it sounds like a robot wrote it, rewrite it.
 
 FABRICATION = INSTANT REJECTION:
-The candidate's real tools are ONLY: {skills_str}.
-Do NOT mention ANY tool not in this list. If the job asks for tools not listed, talk about the work you did, not the tools.
+The candidate's real skills and tools are ONLY: {skills_str}.
+Do NOT mention any skill or tool not in this list. If the job asks for things not listed, talk about the relevant work the candidate has done, not the missing tools.
 
 Sign off: just "{sign_off_name}"
 
