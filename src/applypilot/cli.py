@@ -376,7 +376,7 @@ def doctor() -> None:
         results.append(("python-jobspy", ok_mark, "Job board scraping available"))
     except ImportError:
         results.append(("python-jobspy", warn_mark,
-                        "pip install --no-deps python-jobspy && pip install pydantic tls-client requests markdownify regex"))
+                        "pip install --no-deps python-jobspy && pip install pydantic tls-client requests markdownify regex curl_cffi"))
 
     # --- Tier 2 checks ---
     import os
