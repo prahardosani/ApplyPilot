@@ -89,6 +89,15 @@ def _build_profile_summary(profile: dict) -> str:
             lines.append(f"{label}: {_yn.get(screening[key], screening[key])}")
         else:
             lines.append(f"{label}: {not_provided}")
+    # Optional AU-common questions: only stated when the profile sets them.
+    for key, label in (
+        ("drivers_licence", "Driver's Licence"),
+        ("own_vehicle", "Own Vehicle"),
+        ("police_check", "Willing to Complete National Police Check"),
+        ("working_with_children_check", "Working With Children Check"),
+    ):
+        if key in screening:
+            lines.append(f"{label}: {_yn.get(screening[key], screening[key])}")
     if screening.get("how_heard"):
         lines.append(f"How Heard: {screening['how_heard']}")
 
