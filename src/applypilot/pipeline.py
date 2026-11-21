@@ -61,7 +61,7 @@ _UPSTREAM: dict[str, str | None] = {
 
 def _run_discover(workers: int = 1) -> dict:
     """Stage: Job discovery — JobSpy, Workday, and smart-extract scrapers."""
-    stats: dict = {"jobspy": None, "workday": None, "smartextract": None}
+    stats: dict = {"jobspy": None, "seek": None, "workday": None, "smartextract": None}
 
     # JobSpy
     console.print("  [cyan]JobSpy full crawl...[/cyan]")
@@ -73,6 +73,17 @@ def _run_discover(workers: int = 1) -> dict:
         log.error("JobSpy crawl failed: %s", e)
         console.print(f"  [red]JobSpy error:[/red] {e}")
         stats["jobspy"] = f"error: {e}"
+
+    # SEEK (not supported by JobSpy)
+    console.print("  [cyan]SEEK search...[/cyan]")
+    try:
+        from applypilot.discovery.seek import run_seek_discovery
+        run_seek_discovery()
+        stats["seek"] = "ok"
+    except Exception as e:
+        log.error("SEEK discovery failed: %s", e)
+        console.print(f"  [red]SEEK error:[/red] {e}")
+        stats["seek"] = f"error: {e}"
 
     # Workday corporate scraper
     console.print("  [cyan]Workday corporate scraper...[/cyan]")

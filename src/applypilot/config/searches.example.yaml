@@ -1,13 +1,23 @@
 # ApplyPilot search configuration - Australia starter
 # Copy to ~/.applypilot/searches.yaml and customise for the candidate.
 #
-# This file intentionally avoids SEEK for now. JobSpy does not support SEEK as a
-# built-in board, so SEEK should be added later via a tested importer/scraper.
+# SEEK is not a JobSpy board. It has its own discovery module
+# (discovery/seek.py) configured in the `seek:` block below.
 
 defaults:
   country_indeed: "Australia"
   results_per_site: 50
   hours_old: 72
+
+# SEEK discovery (discovery only - never logs in or applies).
+seek:
+  enabled: true
+  pages_per_query: 2
+  days_old: 3
+  delay_seconds: 2.0
+  max_tier: 2
+  # where_map:            # optional overrides: location label -> SEEK "where"
+  #   sydney: "All Sydney NSW"
 
 # JobSpy source boards. Keep ZipRecruiter out of AU defaults because it is
 # US/Canada-focused in JobSpy. Google can work, but usually needs very specific
