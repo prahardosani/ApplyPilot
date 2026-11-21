@@ -101,6 +101,46 @@ def load_profile() -> dict:
     return json.loads(PROFILE_PATH.read_text(encoding="utf-8"))
 
 
+def normalize_search_config(raw: dict | None) -> dict:
+    """Return a canonical search config while accepting older key names.
+
+    The project has used a few config shapes over time (`boards` vs `sites`,
+    top-level location filters vs nested `location.*`). Normalizing once keeps
+    discovery code simple and prevents phases from interpreting the same file
+    differently.
+    """
+    cfg = dict(raw or {})
+    defaults = dict(cfg.get("defaults") or {})
+
+    # JobSpy expects `country_indeed`; older/example configs used `country`.
+    country = cfg.get("country") or cfg.get("country_indeed")
+    if country and not defaults.get("country_indeed"):
+        defaults["country_indeed"] = country
+    cfg["defaults"] = defaults
+
+    # JobSpy calls these "sites"; user-facing docs previously called them boards.
+    if not cfg.get("sites") and cfg.get("boards"):
+        cfg["sites"] = cfg["boards"]
+
+    location_cfg = dict(cfg.get("location") or {})
+    accept = cfg.get("location_accept") or location_cfg.get("accept_patterns") or []
+    reject = cfg.get("location_reject_non_remote") or location_cfg.get("reject_patterns") or []
+
+    cfg["location_accept"] = list(accept)
+    cfg["location_reject_non_remote"] = list(reject)
+    location_cfg["accept_patterns"] = list(accept)
+    location_cfg["reject_patterns"] = list(reject)
+    cfg["location"] = location_cfg
+
+    return cfg
+
+
+def get_location_filters(search_cfg: dict | None = None) -> tuple[list[str], list[str]]:
+    """Return normalized (accept, reject) location filters."""
+    cfg = normalize_search_config(search_cfg or load_search_config())
+    return cfg.get("location_accept", []), cfg.get("location_reject_non_remote", [])
+
+
 def load_search_config() -> dict:
     """Load search configuration from ~/.applypilot/searches.yaml."""
     import yaml
@@ -108,9 +148,9 @@ def load_search_config() -> dict:
         # Fall back to package-shipped example
         example = CONFIG_DIR / "searches.example.yaml"
         if example.exists():
-            return yaml.safe_load(example.read_text(encoding="utf-8"))
+            return normalize_search_config(yaml.safe_load(example.read_text(encoding="utf-8")))
         return {}
-    return yaml.safe_load(SEARCH_CONFIG_PATH.read_text(encoding="utf-8"))
+    return normalize_search_config(yaml.safe_load(SEARCH_CONFIG_PATH.read_text(encoding="utf-8")))
 
 
 def load_sites_config() -> dict:

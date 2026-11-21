@@ -139,7 +139,8 @@ def generate_cover_letter(
     """
     job_text = (
         f"TITLE: {job['title']}\n"
-        f"COMPANY: {job['site']}\n"
+        f"COMPANY: {job.get('company') or job['site']}\n"
+        f"SOURCE: {job['site']}\n"
         f"LOCATION: {job.get('location', 'N/A')}\n\n"
         f"DESCRIPTION:\n{(job.get('full_description') or '')[:6000]}"
     )
@@ -240,7 +241,8 @@ def run_cover_letters(min_score: int = 7, limit: int = 20,
 
             # Build safe filename prefix
             safe_title = re.sub(r"[^\w\s-]", "", job["title"])[:50].strip().replace(" ", "_")
-            safe_site = re.sub(r"[^\w\s-]", "", job["site"])[:20].strip().replace(" ", "_")
+            company_name = job.get("company") or job["site"]
+            safe_site = re.sub(r"[^\w\s-]", "", company_name)[:20].strip().replace(" ", "_")
             prefix = f"{safe_site}_{safe_title}"
 
             cl_path = COVER_LETTER_DIR / f"{prefix}_CL.txt"

@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from jobspy import scrape_jobs
 
 from applypilot import config
-from applypilot.database import get_connection, init_db, store_jobs
+from applypilot.database import get_connection, init_db
 
 log = logging.getLogger(__name__)
 
@@ -81,9 +81,7 @@ def _load_location_config(search_cfg: dict) -> tuple[list[str], list[str]]:
 
     Falls back to sensible defaults if not defined in the YAML.
     """
-    accept = search_cfg.get("location_accept", [])
-    reject = search_cfg.get("location_reject_non_remote", [])
-    return accept, reject
+    return config.get_location_filters(search_cfg)
 
 
 def _location_ok(location: str | None, accept: list[str], reject: list[str]) -> bool:
@@ -113,6 +111,14 @@ def _location_ok(location: str | None, accept: list[str], reject: list[str]) -> 
 
     # No match -- reject unknown
     return False
+
+
+def _title_ok(title: str | None, exclude_titles: list[str]) -> bool:
+    """Return False when a title contains a configured negative keyword."""
+    if not title:
+        return True
+    title_lower = title.lower()
+    return not any(term.lower() in title_lower for term in exclude_titles)
 
 
 # -- DB storage (JobSpy DataFrame -> SQLite) ---------------------------------
@@ -168,10 +174,10 @@ def store_jobspy_results(conn: sqlite3.Connection, df, source_label: str) -> tup
 
         try:
             conn.execute(
-                "INSERT INTO jobs (url, title, salary, description, location, site, strategy, discovered_at, "
+                "INSERT INTO jobs (url, title, company, salary, description, location, site, strategy, discovered_at, "
                 "full_description, application_url, detail_scraped_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (url, title, salary, description, location_str, site_label, strategy, now,
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (url, title, company, salary, description, location_str, site_label, strategy, now,
                  full_description, apply_url, detail_scraped_at),
             )
             new += 1
@@ -195,6 +201,7 @@ def _run_one_search(
     accept_locs: list[str],
     reject_locs: list[str],
     glassdoor_map: dict,
+    exclude_titles: list[str],
 ) -> dict:
     """Run a single search query and store results in DB."""
     s = search
@@ -274,14 +281,25 @@ def _run_one_search(
         str(row.get("location", "")) if str(row.get("location", "")) != "nan" else None,
         accept_locs, reject_locs,
     ), axis=1)]
-    filtered = before - len(df)
+    location_filtered = before - len(df)
+    title_filtered = 0
+    if exclude_titles:
+        title_before = len(df)
+        df = df[df.apply(lambda row: _title_ok(
+            str(row.get("title", "")) if str(row.get("title", "")) != "nan" else None,
+            exclude_titles,
+        ), axis=1)]
+        title_filtered = title_before - len(df)
+    filtered = location_filtered + title_filtered
 
     conn = get_connection()
     new, existing = store_jobspy_results(conn, df, s["query"])
 
     msg = f"[{label}] {before} results -> {new} new, {existing} dupes"
-    if filtered:
-        msg += f", {filtered} filtered (location)"
+    if location_filtered:
+        msg += f", {location_filtered} filtered (location)"
+    if title_filtered:
+        msg += f", {title_filtered} filtered (title)"
     log.info(msg)
 
     return {"new": new, "existing": existing, "errors": 0, "filtered": filtered, "total": before, "label": label}
@@ -297,11 +315,11 @@ def search_jobs(
     results_per_site: int = 50,
     hours_old: int = 72,
     proxy: str | None = None,
-    country_indeed: str = "usa",
+    country_indeed: str = "Australia",
 ) -> dict:
     """Run a single job search via JobSpy and store results in DB."""
     if sites is None:
-        sites = ["indeed", "linkedin", "zip_recruiter"]
+        sites = ["indeed", "linkedin", "glassdoor"]
 
     proxy_config = parse_proxy(proxy) if proxy else None
 
@@ -369,7 +387,7 @@ def _full_crawl(
 ) -> dict:
     """Run all search queries from search config across all locations."""
     if sites is None:
-        sites = ["indeed", "linkedin", "zip_recruiter"]
+        sites = ["indeed", "linkedin", "glassdoor"]
 
     # Build search combinations from config
     queries = search_cfg.get("queries", [])
@@ -377,6 +395,7 @@ def _full_crawl(
     defaults = search_cfg.get("defaults", {})
     glassdoor_map = search_cfg.get("glassdoor_location_map", {})
     accept_locs, reject_locs = _load_location_config(search_cfg)
+    exclude_titles = search_cfg.get("exclude_titles", [])
 
     if tiers:
         queries = [q for q in queries if q.get("tier") in tiers]
@@ -411,7 +430,7 @@ def _full_crawl(
         result = _run_one_search(
             s, sites, results_per_site, hours_old,
             proxy_config, defaults, max_retries,
-            accept_locs, reject_locs, glassdoor_map,
+            accept_locs, reject_locs, glassdoor_map, exclude_titles,
         )
         completed += 1
         total_new += result["new"]
@@ -461,7 +480,7 @@ def run_discovery(cfg: dict | None = None) -> dict:
         return {"new": 0, "existing": 0, "errors": 0, "db_total": 0, "queries": 0}
 
     proxy = cfg.get("proxy")
-    sites = cfg.get("sites")
+    sites = cfg.get("sites") or cfg.get("boards")
     results_per_site = cfg.get("defaults", {}).get("results_per_site", 100)
     hours_old = cfg.get("defaults", {}).get("hours_old", 72)
     tiers = cfg.get("tiers")

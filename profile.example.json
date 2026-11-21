@@ -4,12 +4,12 @@
     "preferred_name": "YOUR_PREFERRED_NAME",
     "email": "your.email@example.com",
     "password": "YOUR_JOB_SITE_PASSWORD",
-    "phone": "555-123-4567",
+    "phone": "+61 400 000 000",
     "address": "123 Main St",
     "city": "Your City",
-    "province_state": "Your State/Province",
-    "country": "Your Country",
-    "postal_code": "A1B 2C3",
+    "province_state": "Your State/Territory",
+    "country": "Australia",
+    "postal_code": "2000",
     "linkedin_url": "https://www.linkedin.com/in/yourprofile",
     "github_url": "https://github.com/yourusername",
     "portfolio_url": "",
@@ -27,7 +27,7 @@
   },
   "compensation": {
     "salary_expectation": "85000",
-    "salary_currency": "USD",
+    "salary_currency": "AUD",
     "salary_range_min": "80000",
     "salary_range_max": "100000",
     "currency_conversion_note": ""
@@ -37,14 +37,12 @@
     "education_level": "Bachelor's Degree",
     "current_job_title": "",
     "current_company": "",
-    "target_role": "software engineer"
+    "target_role": "environmental consultant"
   },
   "skills_boundary": {
-    "languages": ["Python", "SQL", "JavaScript"],
-    "frameworks": ["FastAPI", "Flask", "React"],
-    "devops": ["Docker", "AWS", "CI/CD"],
-    "databases": ["PostgreSQL", "MongoDB"],
-    "tools": ["Git", "Linux"]
+    "field_skills": ["Environmental sampling", "Water quality monitoring", "GIS"],
+    "lab_skills": ["Sample handling", "Data analysis", "Report writing"],
+    "tools": ["Microsoft Excel", "ArcGIS", "QGIS"]
   },
   "resume_facts": {
     "preserved_companies": ["Company A", "Company B"],
@@ -55,7 +53,7 @@
   "eeo_voluntary": {
     "gender": "Decline to self-identify",
     "race_ethnicity": "Decline to self-identify",
-    "veteran_status": "I am not a protected veteran",
-    "disability_status": "I do not wish to answer"
+    "veteran_status": "Prefer not to say",
+    "disability_status": "Prefer not to say"
   }
 }

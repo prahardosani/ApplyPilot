@@ -93,9 +93,9 @@ def _setup_profile() -> dict:
         "email": Prompt.ask("Email address"),
         "phone": Prompt.ask("Phone number", default=""),
         "city": Prompt.ask("City"),
-        "province_state": Prompt.ask("Province/State (e.g. Ontario, California)", default=""),
+        "province_state": Prompt.ask("State/Territory (e.g. NSW, VIC, QLD)", default=""),
         "country": Prompt.ask("Country"),
-        "postal_code": Prompt.ask("Postal/ZIP code", default=""),
+        "postal_code": Prompt.ask("Postcode", default=""),
         "address": Prompt.ask("Street address (optional, used for form auto-fill)", default=""),
         "linkedin_url": Prompt.ask("LinkedIn URL", default=""),
         "github_url": Prompt.ask("GitHub URL (optional)", default=""),
@@ -115,7 +115,7 @@ def _setup_profile() -> dict:
     # -- Compensation --
     console.print("\n[bold cyan]Compensation[/bold cyan]")
     salary = Prompt.ask("Expected annual salary (number)", default="")
-    salary_currency = Prompt.ask("Currency", default="USD")
+    salary_currency = Prompt.ask("Currency", default="AUD")
     salary_range = Prompt.ask("Acceptable range (e.g. 80000-120000)", default="")
     range_parts = salary_range.split("-") if "-" in salary_range else [salary, salary]
     profile["compensation"] = {
@@ -188,8 +188,8 @@ def _setup_searches() -> None:
     """Generate a searches.yaml from user input."""
     console.print(Panel("[bold]Step 3: Job Search Config[/bold]\nDefine what you're looking for."))
 
-    location = Prompt.ask("Target location (e.g. 'Remote', 'Canada', 'New York, NY')", default="Remote")
-    distance_str = Prompt.ask("Search radius in miles (0 for remote-only)", default="0")
+    location = Prompt.ask("Target location (e.g. 'Sydney NSW', 'Melbourne VIC', 'Remote Australia')", default="Remote Australia")
+    distance_str = Prompt.ask("Search radius in kilometres (0 for remote-only)", default="0")
     try:
         distance = int(distance_str)
     except ValueError:
@@ -210,14 +210,34 @@ def _setup_searches() -> None:
         "# Edit this file to refine your job search queries.",
         "",
         "defaults:",
-        f'  location: "{location}"',
-        f"  distance: {distance}",
+        '  country_indeed: "Australia"',
+        f"  distance_km: {distance}",
         "  hours_old: 72",
         "  results_per_site: 50",
         "",
+        "sites:",
+        "  - indeed",
+        "  - linkedin",
+        "  - glassdoor",
+        "",
         "locations:",
-        f'  - location: "{location}"',
+        "  - label: primary",
+        f'    location: "{location}"',
         f"    remote: {str(distance == 0).lower()}",
+        "",
+        "location_accept:",
+        f'  - "{location}"',
+        '  - "Australia"',
+        '  - "Remote"',
+        "",
+        "location_reject_non_remote:",
+        '  - "United States"',
+        '  - "USA"',
+        '  - "Canada"',
+        '  - "India"',
+        '  - "Philippines"',
+        '  - "United Kingdom"',
+        '  - "UK"',
         "",
         "queries:",
     ]

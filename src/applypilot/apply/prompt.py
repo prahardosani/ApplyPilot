@@ -62,7 +62,7 @@ def _build_profile_summary(profile: dict) -> str:
         lines.append(f"Work Permit: {work_auth['work_permit_type']}")
 
     # Compensation
-    currency = comp.get("salary_currency", "USD")
+    currency = comp.get("salary_currency", "AUD")
     lines.append(f"Salary Expectation: ${comp['salary_expectation']} {currency}")
 
     # Experience
@@ -126,7 +126,7 @@ def _build_salary_section(profile: dict) -> str:
     Adapts floor, range, and currency from the profile's compensation section.
     """
     comp = profile["compensation"]
-    currency = comp.get("salary_currency", "USD")
+    currency = comp.get("salary_currency", "AUD")
     floor = comp["salary_expectation"]
     range_min = comp.get("salary_range_min", floor)
     range_max = comp.get("salary_range_max", str(int(floor) + 20000) if floor.isdigit() else floor)
@@ -513,12 +513,15 @@ def build_prompt(job: dict, tailored_resume: str,
     else:
         submit_instruction = "BEFORE clicking Submit/Apply, take a snapshot and review EVERY field on the page. Verify all data matches the APPLICANT PROFILE and TAILORED RESUME -- name, email, phone, location, work auth, resume uploaded, cover letter if applicable. If anything is wrong or missing, fix it FIRST. Only click Submit after confirming everything is correct."
 
+    company_name = job.get("company") or job.get("site", "Unknown")
+
     prompt = f"""You are an autonomous job application agent. Your ONE mission: get this candidate an interview. You have all the information and tools. Think strategically. Act decisively. Submit the application.
 
 == JOB ==
 URL: {job.get('application_url') or job['url']}
 Title: {job['title']}
-Company: {job.get('site', 'Unknown')}
+Company: {company_name}
+Source: {job.get('site', 'Unknown')}
 Fit Score: {job.get('fit_score', 'N/A')}/10
 
 == FILES ==

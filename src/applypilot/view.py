@@ -74,7 +74,7 @@ def generate_dashboard(output_path: str | None = None) -> str:
 
     # All scored jobs (5+), ordered by score desc
     jobs = conn.execute("""
-        SELECT url, title, salary, description, location, site, strategy,
+        SELECT url, title, company, salary, description, location, site, strategy,
                full_description, application_url, detail_error,
                fit_score, score_reasoning
         FROM jobs
@@ -85,9 +85,9 @@ def generate_dashboard(output_path: str | None = None) -> str:
     # Color map per site
     colors = {
         "RemoteOK": "#10b981", "WelcomeToTheJungle": "#f59e0b",
-        "Job Bank Canada": "#3b82f6", "CareerJet Canada": "#8b5cf6",
         "Hacker News Jobs": "#ff6600", "BuiltIn Remote": "#ec4899",
-        "TD Bank": "#00a651", "CIBC": "#c41f3e", "RBC": "#003168",
+        "Telstra": "#00a3e0", "Lendlease": "#14b8a6", "KBR": "#64748b",
+        "Macquarie University": "#c026d3", "Westpac (NZ tenant)": "#dc2626",
         "indeed": "#2164f3", "linkedin": "#0a66c2",
         "Dice": "#eb1c26", "Glassdoor": "#0caa41",
     }
@@ -147,6 +147,7 @@ def generate_dashboard(output_path: str | None = None) -> str:
             current_score = score
 
         title = escape(j["title"] or "Untitled")
+        company = escape(j["company"] or j["site"] or "")
         url = escape(j["url"] or "")
         salary = escape(j["salary"] or "")
         location = escape(j["location"] or "")
@@ -165,6 +166,8 @@ def generate_dashboard(output_path: str | None = None) -> str:
         desc_len = len(j["full_description"] or "")
 
         meta_parts = []
+        if company:
+            meta_parts.append(f'<span class="meta-tag company">{company}</span>')
         meta_parts.append(
             f'<span class="meta-tag site-tag" style="background:{site_color}33;color:{site_color}">{site}</span>'
         )
@@ -184,6 +187,7 @@ def generate_dashboard(output_path: str | None = None) -> str:
             <span class="score-pill" style="background:{'#10b981' if score >= 7 else '#f59e0b'}">{score}</span>
             <a href="{url}" class="job-title" target="_blank">{title}</a>
           </div>
+          <div class="company-row">{company}</div>
           <div class="meta-row">{meta_html}</div>
           {f'<div class="keywords-row">{escape(keywords)}</div>' if keywords else ''}
           {f'<div class="reasoning-row">{escape(reasoning)}</div>' if reasoning else ''}
@@ -268,7 +272,9 @@ def generate_dashboard(output_path: str | None = None) -> str:
   .job-title:hover {{ color: #60a5fa; }}
 
   .meta-row {{ display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.4rem; }}
+  .company-row {{ color: #cbd5e1; font-size: 0.82rem; margin-bottom: 0.35rem; }}
   .meta-tag {{ font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 4px; background: #334155; color: #94a3b8; }}
+  .meta-tag.company {{ background: #334155; color: #e2e8f0; }}
   .meta-tag.salary {{ background: #064e3b; color: #6ee7b7; }}
   .meta-tag.location {{ background: #1e3a5f; color: #93c5fd; }}
 

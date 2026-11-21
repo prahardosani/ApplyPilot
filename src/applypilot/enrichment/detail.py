@@ -65,9 +65,6 @@ def resolve_url(raw_url: str, site: str) -> str | None:
     if site == "WelcomeToTheJungle":
         return None
 
-    if site == "Randstad Canada" and "/" not in raw_url:
-        return f"https://www.randstad.ca/jobs/search/{raw_url}"
-
     if site == "4DayWeek" and raw_url in ("/", "/jobs"):
         return None
 
@@ -518,8 +515,6 @@ def clean_description(text: str) -> str:
 SITE_DELAYS = {
     "RemoteOK": 3.0,
     "WelcomeToTheJungle": 2.0,
-    "Job Bank Canada": 1.5,
-    "CareerJet Canada": 3.0,
     "Hacker News Jobs": 1.0,
     "BuiltIn Remote": 2.0,
 }
@@ -724,8 +719,8 @@ def _run_detail_scraper(
         log.info("  %s: %d jobs", site, len(jobs))
 
     known_order = [
-        "RemoteOK", "Job Bank Canada", "BuiltIn Remote",
-        "WelcomeToTheJungle", "CareerJet Canada", "Hacker News Jobs",
+        "RemoteOK", "BuiltIn Remote",
+        "WelcomeToTheJungle", "Hacker News Jobs",
     ]
     order = [s for s in known_order if s in site_jobs]
     order += [s for s in sorted(site_jobs.keys()) if s not in order]

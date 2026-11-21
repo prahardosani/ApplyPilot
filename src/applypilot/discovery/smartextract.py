@@ -50,11 +50,7 @@ UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
 def _load_location_filter(search_cfg: dict | None = None):
     """Load location accept/reject lists from search config."""
-    if search_cfg is None:
-        search_cfg = config.load_search_config()
-    accept = search_cfg.get("location_accept", [])
-    reject = search_cfg.get("location_reject_non_remote", [])
-    return accept, reject
+    return config.get_location_filters(search_cfg)
 
 
 def _location_ok(location: str | None, accept: list[str], reject: list[str]) -> bool:
@@ -71,6 +67,14 @@ def _location_ok(location: str | None, accept: list[str], reject: list[str]) -> 
         if a.lower() in loc:
             return True
     return False
+
+
+def _title_ok(title: str | None, exclude_titles: list[str]) -> bool:
+    """Return False when a title contains a configured negative keyword."""
+    if not title:
+        return True
+    title_lower = title.lower()
+    return not any(term.lower() in title_lower for term in exclude_titles)
 
 
 # -- Site configuration from YAML --------------------------------------------
@@ -92,6 +96,7 @@ def _store_jobs_filtered(
     strategy: str,
     accept_locs: list[str],
     reject_locs: list[str],
+    exclude_titles: list[str],
 ) -> tuple[int, int]:
     """Store jobs with location filtering. Returns (new, existing)."""
     now = datetime.now(timezone.utc).isoformat()
@@ -103,14 +108,17 @@ def _store_jobs_filtered(
         url = job.get("url")
         if not url:
             continue
+        if not _title_ok(job.get("title"), exclude_titles):
+            filtered += 1
+            continue
         if not _location_ok(job.get("location"), accept_locs, reject_locs):
             filtered += 1
             continue
         try:
             conn.execute(
-                "INSERT INTO jobs (url, title, salary, description, location, site, strategy, discovered_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (url, job.get("title"), job.get("salary"), job.get("description"),
+                "INSERT INTO jobs (url, title, company, salary, description, location, site, strategy, discovered_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (url, job.get("title"), job.get("company") or site, job.get("salary"), job.get("description"),
                  job.get("location"), site, strategy, now),
             )
             new += 1
@@ -1016,6 +1024,7 @@ def _run_all(
     targets: list[dict],
     accept_locs: list[str],
     reject_locs: list[str],
+    exclude_titles: list[str],
     workers: int = 1,
 ) -> dict:
     """Run smart extract on all targets.
@@ -1036,9 +1045,10 @@ def _run_all(
         nonlocal total_new, total_existing
         jobs = r.get("jobs", [])
         if jobs:
-            new, existing = _store_jobs_filtered(conn, jobs, target["name"],
-                                                  r.get("strategy", "?"),
-                                                  accept_locs, reject_locs)
+            new, existing = _store_jobs_filtered(
+                conn, jobs, target["name"], r.get("strategy", "?"),
+                accept_locs, reject_locs, exclude_titles,
+            )
             total_new += new
             total_existing += existing
             log.info("DB: +%d new, %d already existed", new, existing)
@@ -1103,6 +1113,7 @@ def run_smart_extract(
     """
     search_cfg = config.load_search_config()
     accept_locs, reject_locs = _load_location_filter(search_cfg)
+    exclude_titles = search_cfg.get("exclude_titles", [])
 
     targets = build_scrape_targets(sites=sites, search_cfg=search_cfg)
 
@@ -1115,4 +1126,4 @@ def run_smart_extract(
     log.info("Sites: %d searchable, %d static | Total targets: %d (workers=%d)",
              search_sites, static_sites, len(targets), workers)
 
-    return _run_all(targets, accept_locs, reject_locs, workers=workers)
+    return _run_all(targets, accept_locs, reject_locs, exclude_titles, workers=workers)
