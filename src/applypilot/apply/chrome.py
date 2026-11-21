@@ -97,6 +97,67 @@ def _kill_on_port(port: int) -> None:
 # Worker profile management
 # ---------------------------------------------------------------------------
 
+# Copy essential profile dirs -- skip caches and heavy transient data
+_SKIP = {
+    "ShaderCache", "GrShaderCache", "Service Worker", "Cache",
+    "Code Cache", "GPUCache", "CacheStorage", "Crashpad",
+    "BrowserMetrics", "SafeBrowsing", "Crowd Deny",
+    "MEIPreload", "SSLErrorAssistant", "recovery", "Temp",
+    "SingletonLock", "SingletonSocket", "SingletonCookie",
+}
+
+
+def _copy_tree(source: Path, dest: Path) -> None:
+    dest.mkdir(parents=True, exist_ok=True)
+    for item in source.iterdir():
+        if item.name in _SKIP:
+            continue
+        dst = dest / item.name
+        try:
+            if item.is_dir():
+                shutil.copytree(
+                    str(item), str(dst), dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns(
+                        "Cache", "Code Cache", "GPUCache", "Service Worker",
+                    ),
+                )
+            else:
+                shutil.copy2(str(item), str(dst))
+        except (PermissionError, OSError):
+            pass  # skip locked files
+
+
+def _copy_single_user_profile(profile_dir: Path, worker_id: int) -> None:
+    """Seed a worker from ONE named Chrome profile, never the whole Chrome folder.
+
+    Set APPLYPILOT_CHROME_PROFILE to the candidate's profile folder name
+    (e.g. "Profile 2" - see chrome://version -> Profile Path). Only that
+    profile plus Chrome's "Local State" file are copied, so other people's
+    profiles (and their sign-ins) never reach the worker.
+    """
+    import os
+
+    name = os.environ.get("APPLYPILOT_CHROME_PROFILE", "").strip()
+    user_data = config.get_chrome_user_data()
+    if not name:
+        raise RuntimeError(
+            "APPLYPILOT_CHROME_PROFILE is not set. Open the candidate's Chrome "
+            "profile, visit chrome://version, and put the last folder of "
+            "'Profile Path' (e.g. 'Profile 2') in ~/.applypilot/.env."
+        )
+    src = user_data / name
+    if not (src / "Preferences").exists():
+        raise RuntimeError(f"Chrome profile folder not found: {src}")
+
+    logger.info("[worker-%d] Copying only Chrome profile '%s' (first time setup)...",
+                worker_id, name)
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    local_state = user_data / "Local State"
+    if local_state.exists():
+        shutil.copy2(str(local_state), str(profile_dir / "Local State"))
+    _copy_tree(src, profile_dir / "Default")
+
+
 def setup_worker_profile(worker_id: int) -> Path:
     """Create an isolated Chrome profile for a worker.
 
@@ -124,38 +185,13 @@ def setup_worker_profile(worker_id: int) -> Path:
             source = candidate
             break
     if source is None:
-        source = config.get_chrome_user_data()
+        _copy_single_user_profile(profile_dir, worker_id)
+        return profile_dir
 
     logger.info("[worker-%d] Copying Chrome profile from %s (first time setup)...",
                 worker_id, source.name)
     profile_dir.mkdir(parents=True, exist_ok=True)
-
-    # Copy essential profile dirs -- skip caches and heavy transient data
-    skip = {
-        "ShaderCache", "GrShaderCache", "Service Worker", "Cache",
-        "Code Cache", "GPUCache", "CacheStorage", "Crashpad",
-        "BrowserMetrics", "SafeBrowsing", "Crowd Deny",
-        "MEIPreload", "SSLErrorAssistant", "recovery", "Temp",
-        "SingletonLock", "SingletonSocket", "SingletonCookie",
-    }
-
-    for item in source.iterdir():
-        if item.name in skip:
-            continue
-        dst = profile_dir / item.name
-        try:
-            if item.is_dir():
-                shutil.copytree(
-                    str(item), str(dst), dirs_exist_ok=True,
-                    ignore=shutil.ignore_patterns(
-                        "Cache", "Code Cache", "GPUCache", "Service Worker",
-                    ),
-                )
-            else:
-                shutil.copy2(str(item), str(dst))
-        except (PermissionError, OSError):
-            pass  # skip locked files
-
+    _copy_tree(source, profile_dir)
     return profile_dir
 
 
